@@ -1,0 +1,896 @@
+{
+  "name": "My workflow",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "30217ad0-28bc-4a63-846b-a40f07581177",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -96,
+        224
+      ],
+      "id": "4093a38b-07a1-406a-88cb-5b9a615131a0",
+      "name": "Webhook",
+      "webhookId": "30217ad0-28bc-4a63-846b-a40f07581177"
+    },
+    {
+      "parameters": {
+        "jsCode": "// Trim whitespace from the start and end of the message\nconst message = $json.body.Body.trim();\n\n// Find the first space to separate the command from the arguments\nconst firstSpaceIndex = message.indexOf(' ');\n\nlet command = '';\nlet args = '';\n\nif (firstSpaceIndex === -1) {\n  // No spaces found, the whole message is the command\n  command = message.toUpperCase();\n} else {\n  // The command is the first word\n  command = message.substring(0, firstSpaceIndex).toUpperCase();\n  // The arguments are the rest of the string\n  args = message.substring(firstSpaceIndex + 1);\n}\n\nlet path1 = args;\nlet path2 = '';\n\n// Special handling for MOVE, which has two paths\nif (command === 'MOVE') {\n  const parts = args.split(' ');\n  path1 = parts[0] || '';\n  path2 = parts[1] || '';\n}\n// Special handling for the CONFIRM command\nelse if (command === 'CONFIRM') {\n  const parts = args.split(' '); // e.g., ['DELETE', 'file_id']\n  path1 = parts[0] || ''; // path1 becomes 'DELETE'\n  path2 = parts[1] || ''; // path2 becomes the actual file_id\n}\n\nreturn [{\n  command: command,\n  path1: path1,\n  path2: path2,\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        112,
+        224
+      ],
+      "id": "e49d95fd-60b0-44af-bf42-e52dc0abf86f",
+      "name": "Code",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "LIST",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "4a089d26-992b-42a0-abaf-d1e4625c02c9"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "cdac3603-e6e5-4a5a-9f7a-f588fac000d0",
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "=DELETE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "df1e5f61-d430-437b-8285-0b31b35af87e",
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "MOVE",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "248258d2-36d3-4314-826f-1d41c1c18c6b",
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "SUMMARY",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "a1fd9639-723b-491f-ac4e-1d63b2310af9",
+                    "leftValue": "={{ $json.command }}",
+                    "rightValue": "CONFIRM",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.2,
+      "position": [
+        288,
+        176
+      ],
+      "id": "53055fc1-2a23-4f0f-ba66-5dac79c6d850",
+      "name": "Switch",
+      "executeOnce": false,
+      "alwaysOutputData": false
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = '{{ $json.path1 }}'",
+        "returnAll": true,
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        -160
+      ],
+      "id": "34e07f31-e00b-41d1-bfa3-3ebf1b84fbf9",
+      "name": "Search files and folders",
+      "retryOnFail": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet replyMessage = \"No files found matching your request.\";\n\nif (items.length > 0) {\n  replyMessage = \"Found the following files:\\n\";\n  items.forEach(item => {\n    replyMessage += `- ${item.json.name}\\n`;\n  });\n}\n\nreturn [{\n  json: {\n    replyMessage: replyMessage\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        1216,
+        -160
+      ],
+      "id": "32e9f30c-6a6c-4190-90e6-90be3f5e4a9a",
+      "name": "Code1"
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = '{{ $json.path1 }}'",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        32
+      ],
+      "id": "ec66fc67-0a75-483f-b45a-e0baa83ff588",
+      "name": "Find File to Delete",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name= '{{ $json.path1 }}'",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        224
+      ],
+      "id": "c1677b37-36de-4b51-9ce8-ba08f2bc8534",
+      "name": "Find File to Move",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = '{{ $('Code').item.json.path2 }}'",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1216,
+        224
+      ],
+      "id": "a1bad931-f6bb-4864-9dde-d3e82c7d589e",
+      "name": "Find Destination Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "move",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('Find File to Move').item.json.id }}",
+          "mode": "id"
+        },
+        "driveId": {
+          "__rl": true,
+          "mode": "list",
+          "value": "My Drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "={{$json.id}}",
+          "mode": "id"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1424,
+        224
+      ],
+      "id": "77543211-c888-481f-93b6-8d8cb11d1923",
+      "name": "Move file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{$json.id}}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1424,
+        384
+      ],
+      "id": "42060218-2e1d-4e29-96fd-0ceae8b44007",
+      "name": "Download file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "modelId": {
+          "__rl": true,
+          "value": "models/gemini-2.0-flash",
+          "mode": "list",
+          "cachedResultName": "models/gemini-2.0-flash"
+        },
+        "messages": {
+          "values": [
+            {
+              "content": "=Please provide a concise summary of the following document content in three bullet points.\n\nDocument Content:\n{{$json.text}}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.googleGemini",
+      "typeVersion": 1,
+      "position": [
+        1808,
+        384
+      ],
+      "id": "23f7e90e-bc13-4ce3-9876-41aeada4a93e",
+      "name": "Message a model",
+      "retryOnFail": true,
+      "credentials": {
+        "googlePalmApi": {
+          "id": "02ijefMMhRuRoGmO",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const items = $input.all();\nlet combinedSummary = \"Here are the summaries of the documents:\\n\\n\";\n\nfor (const item of items) {\n  // This is the corrected path to the summary text from the Gemini node\n  const summary = item.json.content.parts[0].text; \n  combinedSummary += summary + \"\\n\\n---\\n\\n\";\n}\n\nreturn [{\n  json: {\n    finalReply: combinedSummary\n  }\n}];"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2160,
+        384
+      ],
+      "id": "7e303938-70be-43d9-b5e0-977aeb93d7c9",
+      "name": "Combine Summaries"
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "+919967339202",
+        "toWhatsapp": true,
+        "message": "={{$json.finalReply}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        2352,
+        384
+      ],
+      "id": "7b932c86-9300-43b0-a8c8-0ba714cf87c1",
+      "name": "Send an SMS/MMS/WhatsApp message",
+      "credentials": {
+        "twilioApi": {
+          "id": "ABWvWKoegkglOdHC",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "+919967339202",
+        "toWhatsapp": true,
+        "message": "=Are you sure you want to delete \"{{$json.name}}\"?  To confirm, please reply with the following command: CONFIRM DELETE {{$json.id}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        32
+      ],
+      "id": "17ccc4b9-c0f5-45b9-afbc-3a05619869d3",
+      "name": "Send an SMS/MMS/WhatsApp message1",
+      "credentials": {
+        "twilioApi": {
+          "id": "ABWvWKoegkglOdHC",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "deleteFile",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $json.path2 }}",
+          "mode": "id"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        576
+      ],
+      "id": "f9ac3a76-ab3b-4cfe-a89a-930a6ee27f7c",
+      "name": "Delete a file",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "+919967339202",
+        "toWhatsapp": true,
+        "message": "= {{ $('Code').item.json.path1 }} moved successfully to {{ $('Code').item.json.path2 }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        224
+      ],
+      "id": "dc12894b-d34c-4fe3-93c5-c6541107ea77",
+      "name": "Send an SMS/MMS/WhatsApp message2",
+      "credentials": {
+        "twilioApi": {
+          "id": "ABWvWKoegkglOdHC",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "=+919967339202",
+        "toWhatsapp": true,
+        "message": "={{$json.replyMessage}}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1424,
+        -160
+      ],
+      "id": "fc4644c8-a329-4fa6-b691-6e5e58500afe",
+      "name": "Send an SMS/MMS/WhatsApp message3",
+      "credentials": {
+        "twilioApi": {
+          "id": "ABWvWKoegkglOdHC",
+          "name": "Twilio account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "fileFolder",
+        "searchMethod": "query",
+        "queryString": "=name = '{{ $json.path1 }}'",
+        "filter": {},
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1040,
+        384
+      ],
+      "id": "67bbad2f-f82e-4511-9869-d839a0fe127d",
+      "name": "Find File to Summarize",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Zru8oM9SlCS27q5P",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1,
+      "position": [
+        1632,
+        432
+      ],
+      "id": "cff99890-0806-4031-b0a7-3eb0cc5139e1",
+      "name": "Extract from File"
+    },
+    {
+      "parameters": {
+        "operation": "appendOrUpdate",
+        "documentId": {
+          "__rl": true,
+          "value": "15iWVaXyORBIIlqnu_VFNaBfxEJwRAUw48U9FkuMkI-U",
+          "mode": "id"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": "gid=0",
+          "mode": "list",
+          "cachedResultName": "Sheet1",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/15iWVaXyORBIIlqnu_VFNaBfxEJwRAUw48U9FkuMkI-U/edit#gid=0"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "Timestamp": "={{new Date().toISOString()}}",
+            "Command": "={{$json.command}}",
+            "Path1": "={{$json.path1}}",
+            "Path2": "={{$json.path2}}",
+            "From": "={{ $('Webhook').item.json.body.WaId }}"
+          },
+          "matchingColumns": [
+            "Timestamp"
+          ],
+          "schema": [
+            {
+              "id": "Timestamp",
+              "displayName": "Timestamp",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "From",
+              "displayName": "From",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "Command",
+              "displayName": "Command",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Path1",
+              "displayName": "Path1",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "Path2",
+              "displayName": "Path2",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        640,
+        576
+      ],
+      "id": "ffcdff30-34d1-4899-acdb-3741b7eb6986",
+      "name": "Append or update row in sheet2",
+      "alwaysOutputData": true,
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "dYELtJaqYXcFhV6d",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "from": "+14155238886",
+        "to": "+919967339202",
+        "toWhatsapp": true,
+        "message": "={{ $json.id }} Deleted upon your request ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.twilio",
+      "typeVersion": 1,
+      "position": [
+        1216,
+        576
+      ],
+      "id": "b0c1f0a1-5754-458f-85c7-7991e9c2e657",
+      "name": "Send an SMS/MMS/WhatsApp message4",
+      "credentials": {
+        "twilioApi": {
+          "id": "ABWvWKoegkglOdHC",
+          "name": "Twilio account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "Code",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Search files and folders",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find File to Delete",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find File to Move",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Find File to Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Append or update row in sheet2",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Delete a file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Search files and folders": {
+      "main": [
+        [
+          {
+            "node": "Code1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find File to Delete": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find File to Move": {
+      "main": [
+        [
+          {
+            "node": "Find Destination Folder",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Destination Folder": {
+      "main": [
+        [
+          {
+            "node": "Move file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Download file": {
+      "main": [
+        [
+          {
+            "node": "Extract from File",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Message a model": {
+      "main": [
+        [
+          {
+            "node": "Combine Summaries",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Combine Summaries": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Move file": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Code1": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find File to Summarize": {
+      "main": [
+        [
+          {
+            "node": "Download file",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract from File": {
+      "main": [
+        [
+          {
+            "node": "Message a model",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Append or update row in sheet2": {
+      "main": [
+        []
+      ]
+    },
+    "Delete a file": {
+      "main": [
+        [
+          {
+            "node": "Send an SMS/MMS/WhatsApp message4",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Send an SMS/MMS/WhatsApp message1": {
+      "main": [
+        []
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "d62371f7-71ea-4c9f-a2ec-7b190607ebd4",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "08db6573218003fde9039da734d9e674564c61c1c11bb7f5debb5d2696813a21"
+  },
+  "id": "R1RdgEU920rVekK6",
+  "tags": []
+}
